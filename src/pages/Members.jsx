@@ -1,5 +1,6 @@
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 const rooms = [
   {
@@ -33,6 +34,9 @@ const rooms = [
 ]
 
 function Members({ tasks, setTasks, members, setMembers }) {
+  const [householdId, setHouseholdId] = useState(null)
+  const [loading, setLoading] = useState(true)
+
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [selectedMemberId, setSelectedMemberId] = useState(null)
 
@@ -41,10 +45,117 @@ function Members({ tasks, setTasks, members, setMembers }) {
   const [room, setRoom] = useState('salon')
   const [showForm, setShowForm] = useState(false)
 
-  // Profil üzerinden görev ekleme
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [newTaskName, setNewTaskName] = useState('')
   const [newTaskTime, setNewTaskTime] = useState('')
+
+  // VERİLERİ SUPABASE'DEN GETİR
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser()
+
+      if (userError) throw userError
+      if (!user) throw new Error('Kullanıcı oturumu bulunamadı.')
+
+      // Kullanıcının evini bul
+      const { data: membership, error: membershipError } =
+        await supabase
+          .from('household_members')
+          .select('household_id, name, role, room, emoji')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+      if (membershipError) throw membershipError
+      if (!membership) {
+        throw new Error('Kullanıcıya ait ev kaydı bulunamadı.')
+      }
+
+      const currentHouseholdId = membership.household_id
+      setHouseholdId(currentHouseholdId)
+
+      // Ev üyelerini getir
+      const { data: memberRows, error: memberError } =
+        await supabase
+          .from('members')
+          .select('*')
+          .eq('household_id', currentHouseholdId)
+          .order('created_at', { ascending: true })
+
+      if (memberError) throw memberError
+
+      let loadedMembers = memberRows || []
+
+      // Ev sahibi henüz members tablosunda yoksa ekle
+      const ownerExists = loadedMembers.some(
+        member =>
+          member.name.trim().toLocaleLowerCase('tr-TR') ===
+          membership.name.trim().toLocaleLowerCase('tr-TR')
+      )
+
+      if (!ownerExists) {
+        const { data: owner, error: ownerError } =
+          await supabase
+            .from('members')
+            .insert({
+              household_id: currentHouseholdId,
+              name: membership.name,
+              role: membership.role,
+              room: membership.room,
+              emoji: membership.emoji || '🏡'
+            })
+            .select()
+            .single()
+
+        if (ownerError) throw ownerError
+
+        loadedMembers = [...loadedMembers, owner]
+      }
+
+      setMembers(loadedMembers)
+
+      // Ev görevlerini getir
+      const { data: taskRows, error: taskError } =
+        await supabase
+          .from('tasks')
+          .select('*')
+          .eq('household_id', currentHouseholdId)
+          .order('created_at', { ascending: false })
+
+      if (taskError) throw taskError
+
+      const loadedTasks = (taskRows || []).map(task => {
+        const assignedMember = loadedMembers.find(
+          member => member.id === task.member_id
+        )
+
+        return {
+          id: task.id,
+          name: task.name,
+          person: assignedMember?.name || 'Atanmamış',
+          member_id: task.member_id,
+          time: task.time || '',
+          done: task.done
+        }
+      })
+
+      setTasks(loadedTasks)
+
+    } catch (error) {
+      console.error('Veri yükleme hatası:', error.message)
+      alert('Veriler yüklenemedi: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const currentRoom = rooms.find(r => r.id === selectedRoom)
 
@@ -53,20 +164,15 @@ function Members({ tasks, setTasks, members, setMembers }) {
   )
 
   const memberTasks = selectedMember
-    ? tasks.filter(
-        task =>
-          task.person.trim().toLocaleLowerCase('tr-TR') ===
-          selectedMember.name.trim().toLocaleLowerCase('tr-TR')
-      )
+    ? tasks.filter(task => task.member_id === selectedMember.id)
     : []
 
-  // Yeni üye ekle
-  const addMember = e => {
+  // YENİ ÜYE EKLE
+  const addMember = async e => {
     e.preventDefault()
 
-    if (!name.trim()) return
+    if (!name.trim() || !householdId) return
 
-    // Aynı isimde üye eklenmesini engelle
     const alreadyExists = members.some(
       member =>
         member.name.trim().toLocaleLowerCase('tr-TR') ===
@@ -78,16 +184,24 @@ function Members({ tasks, setTasks, members, setMembers }) {
       return
     }
 
-    setMembers(old => [
-      ...old,
-      {
-        id: Date.now(),
+    const { data, error } = await supabase
+      .from('members')
+      .insert({
+        household_id: householdId,
         name: name.trim(),
         role,
         room,
         emoji: '🙂'
-      }
-    ])
+      })
+      .select()
+      .single()
+
+    if (error) {
+      alert('Üye eklenemedi: ' + error.message)
+      return
+    }
+
+    setMembers(old => [...old, data])
 
     setName('')
     setRole('Üye')
@@ -95,18 +209,48 @@ function Members({ tasks, setTasks, members, setMembers }) {
     setShowForm(false)
   }
 
-  // Üye sil
-  const deleteMember = id => {
-    if (window.confirm('Bu üyeyi silmek istiyor musun?')) {
-      setMembers(old => old.filter(member => member.id !== id))
+  // ÜYE SİL
+  const deleteMember = async id => {
+    if (!window.confirm('Bu üyeyi silmek istiyor musun?')) return
 
-      setSelectedMemberId(null)
-      setShowTaskForm(false)
+    const { error } = await supabase
+      .from('members')
+      .delete()
+      .eq('id', id)
+      .eq('household_id', householdId)
+
+    if (error) {
+      alert('Üye silinemedi: ' + error.message)
+      return
     }
+
+    setMembers(old => old.filter(member => member.id !== id))
+    setSelectedMemberId(null)
+    setShowTaskForm(false)
+
+    // Üyeye atanmış görevler veritabanında member_id = null olur.
+    setTasks(old =>
+      old.map(task =>
+        task.member_id === id
+          ? { ...task, member_id: null, person: 'Atanmamış' }
+          : task
+      )
+    )
   }
 
-  // Oda değiştir
-  const moveMember = (id, newRoom) => {
+  // ODA DEĞİŞTİR
+  const moveMember = async (id, newRoom) => {
+    const { error } = await supabase
+      .from('members')
+      .update({ room: newRoom })
+      .eq('id', id)
+      .eq('household_id', householdId)
+
+    if (error) {
+      alert('Oda değiştirilemedi: ' + error.message)
+      return
+    }
+
     setMembers(old =>
       old.map(member =>
         member.id === id
@@ -116,34 +260,71 @@ function Members({ tasks, setTasks, members, setMembers }) {
     )
   }
 
-  // Görev tamamla
-  const toggleMemberTask = id => {
+  // GÖREV TAMAMLA
+  const toggleMemberTask = async id => {
+    const task = tasks.find(item => item.id === id)
+    if (!task) return
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({ done: !task.done })
+      .eq('id', id)
+      .eq('household_id', householdId)
+
+    if (error) {
+      alert('Görev güncellenemedi: ' + error.message)
+      return
+    }
+
     setTasks(old =>
-      old.map(task =>
-        task.id === id
-          ? { ...task, done: !task.done }
-          : task
+      old.map(item =>
+        item.id === id
+          ? { ...item, done: !item.done }
+          : item
       )
     )
   }
 
-  // Profil üzerinden görev oluştur
-  const addTaskToMember = e => {
+  // ÜYEYE GÖREV EKLE
+  const addTaskToMember = async e => {
     e.preventDefault()
 
-    if (!newTaskName.trim() || !newTaskTime || !selectedMember) {
+    if (
+      !newTaskName.trim() ||
+      !newTaskTime ||
+      !selectedMember ||
+      !householdId
+    ) return
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        household_id: householdId,
+        member_id: selectedMember.id,
+        name: newTaskName.trim(),
+        time: newTaskTime,
+        priority: 'orta',
+        done: false
+      })
+      .select()
+      .single()
+
+    if (error) {
+      alert('Görev eklenemedi: ' + error.message)
       return
     }
 
-    const newTask = {
-      id: Date.now(),
-      name: newTaskName.trim(),
-      person: selectedMember.name,
-      time: newTaskTime,
-      done: false
-    }
-
-    setTasks(old => [...old, newTask])
+    setTasks(old => [
+      ...old,
+      {
+        id: data.id,
+        name: data.name,
+        person: selectedMember.name,
+        member_id: selectedMember.id,
+        time: data.time || '',
+        done: data.done
+      }
+    ])
 
     setNewTaskName('')
     setNewTaskTime('')
@@ -155,6 +336,14 @@ function Members({ tasks, setTasks, members, setMembers }) {
     setShowTaskForm(false)
     setNewTaskName('')
     setNewTaskTime('')
+  }
+
+  if (loading) {
+    return (
+      <main className="main-content">
+        <div className="app-loading">Evimiz hazırlanıyor...</div>
+      </main>
+    )
   }
 
   return (

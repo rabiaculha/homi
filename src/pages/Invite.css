@@ -1,0 +1,259 @@
+
+.invite-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 55px 35px;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+.invite-container {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.invite-header {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.invite-header-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.invite-label {
+  color: #85b99d;
+  font-size: 11px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.invite-header h1 {
+  color: #286653;
+  font-size: 29px;
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.invite-header > p:last-child {
+  color: #82968e;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.invite-card {
+  background: #ffffff;
+  border: 1px solid #e2eee6;
+  border-radius: 22px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(65, 110, 85, 0.06);
+  margin-bottom: 20px;
+}
+
+.invite-card-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: #e8f5ec;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 27px;
+  margin: 0 auto 18px;
+}
+
+.invite-card h2 {
+  color: #286653;
+  font-size: 21px;
+  margin-bottom: 10px;
+}
+
+.invite-card > p {
+  color: #879991;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 22px;
+}
+
+.invite-primary-btn {
+  background: #8fbea4;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.invite-primary-btn:hover {
+  background: #659e80;
+  transform: translateY(-2px);
+}
+
+.invite-primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* OLUŞAN DAVET KODU */
+
+.generated-code {
+  background: #f0f8f2;
+  border: 2px dashed #a6ceb5;
+  border-radius: 17px;
+  padding: 22px;
+  margin-top: 25px;
+}
+
+.code-caption {
+  display: block;
+  color: #729984;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+}
+
+.code-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.code-display strong {
+  color: #286653;
+  font-size: 25px;
+  letter-spacing: 3px;
+  overflow-wrap: anywhere;
+}
+
+.copy-btn {
+  background: #286653;
+  color: white;
+  border: none;
+  padding: 11px 17px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.copy-btn:hover {
+  background: #194d3d;
+}
+
+.generated-code > p {
+  color: #789186;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 15px;
+}
+
+/* AYIRICI */
+
+.invite-divider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 28px 0;
+  color: #9aafa2;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.invite-divider::before,
+.invite-divider::after {
+  content: '';
+  height: 1px;
+  background: #dce9df;
+  flex: 1;
+}
+
+/* EVE KATILMA FORMU */
+
+.join-invite form {
+  text-align: left;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.invite-input-group {
+  margin-bottom: 18px;
+}
+
+.invite-input-group label {
+  display: block;
+  color: #426c59;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.invite-input-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 15px;
+  border: 1px solid #dce9df;
+  background: #f8fbf8;
+  color: #315b48;
+  border-radius: 11px;
+  outline: none;
+  font-size: 13px;
+}
+
+.invite-input-group input:focus {
+  border-color: #8fbea4;
+  box-shadow: 0 0 0 3px rgba(143, 190, 164, 0.15);
+}
+
+.join-invite .invite-primary-btn {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.invite-message {
+  background: #e8f5ec;
+  color: #286653;
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  font-size: 13px;
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+
+.invite-footer {
+  text-align: center;
+  color: #9aafa2;
+  font-size: 12px;
+  margin-top: 30px;
+}
+
+@media (max-width: 650px) {
+  .invite-page {
+    padding: 30px 15px;
+  }
+
+  .invite-card {
+    padding: 25px 18px;
+  }
+
+  .invite-header h1 {
+    font-size: 24px;
+  }
+
+  .code-display strong {
+    font-size: 21px;
+  }
+}
